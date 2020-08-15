@@ -228,8 +228,8 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         folders=[]
         files=[]
         try:
-            folders = [i for i in os.listdir(path) if os.path.isdir(i)]
-            files=[i for i in os.listdir(path) if os.path.isfile(i)]
+            folders = [i.replace("\\",'/') for i in os.listdir(path.replace("\\",'/')) if os.path.isdir(i)]
+            files=[i.replace("\\",'/') for i in os.listdir(path.replace("\\",'/')) if os.path.isfile(i)]
             folders=sorted(folders)
             files=sorted(files)
         except os.error:
@@ -254,8 +254,8 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         f.write(b"<input type=\"submit\" value=\"Upload\"/></form>\n")
         f.write(b"<hr>\n<table align=\"center\" class=\"altrowstable\" id=\"alternatecolor\">\n")
         for name in folder_and_files:
-            fullname = os.path.join(path, name)
-            displayname = linkname = name
+            fullname = os.path.join(path.replace("\\",'/'), name.replace("\\",'/'))
+            displayname = linkname = name.replace("\\",'/')
             # Append / for dirctories or @ for symbolic links
             if os.path.isdir(fullname):
                 displayname = name + "/"
@@ -333,7 +333,7 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         '': 'application/octet-stream', # Default
         })
     txt_file_extensions=['cpp','c','h','hpp',
-                         'java','py'
+                         'java','py','cfg','ini','txt','frag','vert','elf','xml','md','qpa'
                          ]
     for i in txt_file_extensions:
         extensions_map["."+i.lower().lstrip(".")]='text/html'
