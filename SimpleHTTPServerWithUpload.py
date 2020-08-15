@@ -29,7 +29,8 @@ import mimetypes
 import re
 from io import BytesIO
  
- 
+ALIAS="1123123"
+
 class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
  
     """Simple HTTP request handler with GET/HEAD/POST commands.
@@ -62,7 +63,8 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         print((r, info, "by: ", self.client_address))
         f = BytesIO()
         f.write(b'<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">')
-        f.write(b"<html>\n<title>Upload Result Page</title>\n")
+        f.write("<html>\n<head>\n<meta content=\"text/html; charset=UTF-8\" http-equiv=\"Content-Type\">\n".encode())
+        f.write(b"\n<title>Upload Result Page</title>\n")
         f.write(b"<body>\n<h2>Upload Result Page</h2>\n")
         f.write(b"<hr>\n")
         if r:
@@ -71,8 +73,6 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             f.write(b"<strong>Failed:</strong>")
         f.write(info.encode())
         f.write(("<br><a href=\"%s\">back</a>" % self.headers['referer']).encode())
-        f.write(b"<hr><small>Powerd By: bones7456, check new version at ")
-        f.write(b"<a href=\"http://li2z.cn/?s=SimpleHTTPServerWithUpload\">")
         f.write(b"here</a>.</small></body>\n</html>\n")
         length = f.tell()
         f.seek(0)
@@ -163,6 +163,8 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-type", ctype)
         fs = os.fstat(f.fileno())
+        self.send_header("ContentType", "text/html")
+        self.send_header('charset', "utf-8")
         self.send_header("Content-Length", str(fs[6]))
         self.send_header("Last-Modified", self.date_time_string(fs.st_mtime))
         self.end_headers()
@@ -185,8 +187,13 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         f.write(b'<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">')
         f.write("<html>\n<head>\n<meta content=\"text/html; charset=UTF-8\" http-equiv=\"Content-Type\">\n".encode())
         f.write(("<html>\n<title>Directory listing for %s</title>\n" % displaypath).encode())
-        f.write(("<body>\n<h2>Directory listing for %s</h2>\n" % displaypath).encode())
-        f.write(b"<hr>\n")
+        f.write('<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">'.encode())
+        f.write("<html>\n<head>\n<meta content=\"text/html; charset=UTF-8\" http-equiv=\"Content-Type\">\n".encode())
+        f.write(("<title>RPJ %s</title>\n</head>\n" % displaypath).encode())
+        f.write(("""
+        <body>\n<h2 align=\"center\"> <font color=\"blue\">{}</font>\'s site. 
+        <br>  Now you are at <code ><font color=\"red\">{}</font></code>
+        </h2>\n""".format(ALIAS, path)).encode())
         f.write(b"<form ENCTYPE=\"multipart/form-data\" method=\"post\">")
         f.write(b"<input name=\"file\" type=\"file\"/>")
         f.write(b"<input type=\"submit\" value=\"upload\"/></form>\n")
@@ -207,7 +214,8 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         length = f.tell()
         f.seek(0)
         self.send_response(200)
-        self.send_header("ContentType", "text/html;charset=utf-8")
+        self.send_header("ContentType", "text/html")
+        self.send_header('charset',"utf-8")
         self.send_header("Content-Length", str(length))
         self.end_headers()
         return f
@@ -265,7 +273,7 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                          'java','py'
                          ]
     for i in txt_file_extensions:
-        extensions_map["."+i.lower().lstrip(".")]='text/plain'
+        extensions_map["."+i.lower().lstrip(".")]='text/html'
  
 def test(HandlerClass = SimpleHTTPRequestHandler,
          ServerClass = http.server.HTTPServer):
