@@ -1,25 +1,16 @@
-
 #!/usr/bin/env python3
-import sys, os, socket
-from socketserver import ThreadingMixIn
-from http.server import SimpleHTTPRequestHandler, HTTPServer
+#coding:utf-8
 
-HOST = socket.gethostname()
-#!/usr/bin/env python3
- 
 """Simple HTTP Server With Upload.
 This module builds on BaseHTTPServer by implementing the standard GET
 and HEAD requests in a fairly straightforward manner.
 see: https://gist.github.com/UniIsland/3346170
 """
- 
- 
-__version__ = "0.1"
-__all__ = ["SimpleHTTPRequestHandler"]
-__author__ = "bones7456"
-__home_page__ = "http://li2z.cn/"
- 
-import os
+
+
+import sys, os, socket
+from socketserver import ThreadingMixIn
+from http.server import SimpleHTTPRequestHandler, HTTPServer
 import posixpath
 import http.server
 import urllib.request, urllib.parse, urllib.error
@@ -28,8 +19,67 @@ import shutil
 import mimetypes
 import re
 from io import BytesIO
- 
-ALIAS="1123123"
+
+HOST = socket.gethostname()
+ALIAS="Magic"
+CSS="""
+<script type="text/javascript">
+function altRows(id){
+    if(document.getElementsByTagName){ 
+         
+        var table = document.getElementById(id); 
+        var rows = table.getElementsByTagName("tr");
+          
+        for(i = 0; i < rows.length; i++){         
+            if(i % 2 == 0){
+                rows[i].className = "evenrowcolor";
+            }else{
+                rows[i].className = "oddrowcolor";
+            }     
+        }
+    }
+}
+window.onload=function(){
+    altRows('alternatecolor');
+}
+</script>
+
+<style type="text/css">
+table.altrowstable {
+    font-family: verdana,arial,sans-serif;
+    font-size:14px;
+    color:#333333;
+    border-width: 1px;
+    border-color: #a9c6c9;
+    border-collapse: collapse;
+}
+table.altrowstable th {
+    border-width: 1px;
+    padding: 8px;
+    border-style: solid;
+    border-color: #a9c6c9;
+}
+table.altrowstable td {
+    border-width: 1px;
+    padding: 8px;
+    border-style: solid;
+    border-color: #a9c6c9;
+}
+.oddrowcolor{
+    background-color:#d4e3e5;
+}
+.evenrowcolor{
+    background-color:#c3dde0;
+}
+<!--
+a:link { text-decoration: none;color: black}
+a:active { text-decoration:blink}
+a:hover { text-decoration:underline;color: red}
+a:visited { text-decoration: none;color: black}
+-－>
+</style>
+"""
+
 
 class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
  
@@ -41,9 +91,7 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
     The GET/HEAD/POST requests are identical except that the HEAD
     request omits the actual contents of the file.
     """
- 
-    server_version = "SimpleHTTPWithUpload/" + __version__
- 
+
     def do_GET(self):
         """Serve a GET request."""
         f = self.send_head()
@@ -65,15 +113,15 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         f.write(b'<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">')
         f.write("<html>\n<head>\n<meta content=\"text/html; charset=UTF-8\" http-equiv=\"Content-Type\">\n".encode())
         f.write(b"\n<title>Upload Result Page</title>\n")
-        f.write(b"<body>\n<h2>Upload Result Page</h2>\n")
+        f.write(b"<body>\n<div align=\"center\"><h2>Upload Result Page</h2>\n")
         f.write(b"<hr>\n")
         if r:
             f.write(b"<strong>Success:</strong>")
         else:
             f.write(b"<strong>Failed:</strong>")
         f.write(info.encode())
-        f.write(("<br><a href=\"%s\">back</a>" % self.headers['referer']).encode())
-        f.write(b"here</a>.</small></body>\n</html>\n")
+        f.write(("<br><a href=\"%s\" > <font color=\"green\">Click here to go back!!!</font></a>" % self.headers['referer']).encode())
+        f.write(b"</a>.</small></div></body>\n</html>\n")
         length = f.tell()
         f.seek(0)
         self.send_response(200)
@@ -176,12 +224,18 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         error).  In either case, the headers are sent, making the
         interface the same as for send_head().
         """
+        folder_and_files=[]
+        folders=[]
+        files=[]
         try:
-            list = os.listdir(path)
+            folders = [i for i in os.listdir(path) if os.path.isdir(i)]
+            files=[i for i in os.listdir(path) if os.path.isfile(i)]
+            folders=sorted(folders)
+            files=sorted(files)
         except os.error:
             self.send_error(404, "No permission to list directory")
             return None
-        list.sort(key=lambda a: (not os.path.isdir(a),a.lower()))
+        folder_and_files=folders+files
         f = BytesIO()
         displaypath = html.escape(urllib.parse.unquote(self.path))
         f.write(b'<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">')
@@ -189,29 +243,37 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         f.write(("<html>\n<title>Directory listing for %s</title>\n" % displaypath).encode())
         f.write('<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">'.encode())
         f.write("<html>\n<head>\n<meta content=\"text/html; charset=UTF-8\" http-equiv=\"Content-Type\">\n".encode())
+        f.write(CSS.encode())
         f.write(("<title>RPJ %s</title>\n</head>\n" % displaypath).encode())
         f.write(("""
         <body>\n<h2 align=\"center\"> <font color=\"blue\">{}</font>\'s site. 
         <br>  Now you are at <code ><font color=\"red\">{}</font></code>
         </h2>\n""".format(ALIAS, path)).encode())
-        f.write(b"<form ENCTYPE=\"multipart/form-data\" method=\"post\">")
+        f.write(b"<form align=\"center\" ENCTYPE=\"multipart/form-data\" method=\"post\">")
         f.write(b"<input name=\"file\" type=\"file\"/>")
-        f.write(b"<input type=\"submit\" value=\"upload\"/></form>\n")
-        f.write(b"<hr>\n<ul>\n")
-        for name in list:
+        f.write(b"<input type=\"submit\" value=\"Upload\"/></form>\n")
+        f.write(b"<hr>\n<table align=\"center\" class=\"altrowstable\" id=\"alternatecolor\">\n")
+        for name in folder_and_files:
             fullname = os.path.join(path, name)
-            print(fullname)
             displayname = linkname = name
-            # Append / for directories or @ for symbolic links
+            # Append / for dirctories or @ for symbolic links
             if os.path.isdir(fullname):
                 displayname = name + "/"
                 linkname = name + "/"
             if os.path.islink(fullname):
                 displayname = name + "@"
                 # Note: a link to a directory displays with @ and links with /
-            f.write(('<li><a href="%s">%s</a>\n'
+            download_area=   "{}".format(
+                                        "" if os.path.isdir(fullname) or os.path.islink(fullname)
+                                            else
+                                                """<a href=\"{}\" download="" >{}</a>""".format("./"+name, "DownLoad"))
+            f.write("<tr>".encode())
+            f.write(('<td width=400><a href="%s">%s</a></td>\n'
                     % (urllib.parse.quote(linkname), html.escape(displayname))).encode('utf-8'))
-        f.write(b"</ul>\n<hr>\n</body>\n</html>\n")
+            f.write("""<td width="200">{}</td>""".format(download_area).encode())
+
+            f.write("</tr>".encode())
+        f.write(b"</table>\n<hr>\n</body>\n</html>\n")
         length = f.tell()
         f.seek(0)
         self.send_response(200)
@@ -275,10 +337,6 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                          ]
     for i in txt_file_extensions:
         extensions_map["."+i.lower().lstrip(".")]='text/html'
- 
-def test(HandlerClass = SimpleHTTPRequestHandler,
-         ServerClass = http.server.HTTPServer):
-    http.server.test(HandlerClass, ServerClass)
 
 class ThreadingSimpleServer(ThreadingMixIn, HTTPServer):
     pass
@@ -303,7 +361,8 @@ if __name__ == '__main__':
         CWD = os.getcwd()
 
     server = ThreadingSimpleServer(('0.0.0.0', PORT), SimpleHTTPRequestHandler)
-    print("Serving HTTP traffic from", CWD, "on", HOST, "using port", PORT)
+
+    print("Http server is runing on {}! \nWorking Folder: {}\nPort: {}".format(HOST,CWD,PORT))
     try:
         while 1:
             sys.stdout.flush()
