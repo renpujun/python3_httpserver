@@ -181,7 +181,7 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         except os.error:
             self.send_error(404, "No permission to list directory")
             return None
-        list.sort(key=lambda a: a.lower())
+        list.sort(key=lambda a: (not os.path.isdir(a),a.lower()))
         f = BytesIO()
         displaypath = html.escape(urllib.parse.unquote(self.path))
         f.write(b'<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">')
@@ -200,6 +200,7 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         f.write(b"<hr>\n<ul>\n")
         for name in list:
             fullname = os.path.join(path, name)
+            print(fullname)
             displayname = linkname = name
             # Append / for directories or @ for symbolic links
             if os.path.isdir(fullname):
@@ -214,7 +215,7 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         length = f.tell()
         f.seek(0)
         self.send_response(200)
-        self.send_header("ContentType", "text/html")
+        self.send_header("contentType", "text/html")
         self.send_header('charset',"utf-8")
         self.send_header("Content-Length", str(length))
         self.end_headers()
