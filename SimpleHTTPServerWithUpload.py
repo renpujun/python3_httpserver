@@ -206,7 +206,7 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         length = f.tell()
         f.seek(0)
         self.send_response(200)
-        self.send_header("Content-type", "text/html")
+        self.send_header("ContentType", "text/html;charset=utf-8")
         self.send_header("Content-Length", str(length))
         self.end_headers()
         return f
@@ -245,16 +245,6 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         shutil.copyfileobj(source, outputfile)
  
     def guess_type(self, path):
-        """Guess the type of a file.
-        Argument is a PATH (a filename).
-        Return value is a string of the form type/subtype,
-        usable for a MIME Content-type header.
-        The default implementation looks the file's extension
-        up in the table self.extensions_map, using application/octet-stream
-        as a default; however it would be permissible (if
-        slow) to look inside the data to make a better guess.
-        """
- 
         base, ext = posixpath.splitext(path)
         if ext in self.extensions_map:
             return self.extensions_map[ext]
@@ -269,19 +259,21 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
     extensions_map = mimetypes.types_map.copy()
     extensions_map.update({
         '': 'application/octet-stream', # Default
-        '.py': 'text/plain',
-        '.c': 'text/plain',
-        '.h': 'text/plain',
         })
- 
+    txt_file_extensions=['cpp','c','h','hpp',
+                         'java','py'
+                         ]
+    for i in txt_file_extensions:
+        extensions_map["."+i.lower().lstrip(".")]='text/plain'
  
 def test(HandlerClass = SimpleHTTPRequestHandler,
          ServerClass = http.server.HTTPServer):
     http.server.test(HandlerClass, ServerClass)
 
+class ThreadingSimpleServer(ThreadingMixIn, HTTPServer):
+    pass
+
 if __name__ == '__main__':
-    class ThreadingSimpleServer(ThreadingMixIn, HTTPServer):
-        pass
 
     '''
     This sets the listening port, default port 8080
