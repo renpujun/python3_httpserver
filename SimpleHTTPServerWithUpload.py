@@ -183,6 +183,7 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         f = BytesIO()
         displaypath = html.escape(urllib.parse.unquote(self.path))
         f.write(b'<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">')
+        f.write("<html>\n<head>\n<meta content=\"text/html; charset=UTF-8\" http-equiv=\"Content-Type\">\n".encode())
         f.write(("<html>\n<title>Directory listing for %s</title>\n" % displaypath).encode())
         f.write(("<body>\n<h2>Directory listing for %s</h2>\n" % displaypath).encode())
         f.write(b"<hr>\n")
@@ -201,7 +202,7 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                 displayname = name + "@"
                 # Note: a link to a directory displays with @ and links with /
             f.write(('<li><a href="%s">%s</a>\n'
-                    % (urllib.parse.quote(linkname), html.escape(displayname))).encode())
+                    % (urllib.parse.quote(linkname), html.escape(displayname))).encode('utf-8'))
         f.write(b"</ul>\n<hr>\n</body>\n</html>\n")
         length = f.tell()
         f.seek(0)
