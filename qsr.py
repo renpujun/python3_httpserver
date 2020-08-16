@@ -358,12 +358,12 @@ class ThreadingSimpleServer(ThreadingMixIn, HTTPServer):
 helpMsg=\
 """qsr.py tips:
     qsr.py is only for python3.
-    usage example: python3 qsr --dir yourdir --port portnumber --logfile mylog.txt --alias SiteName
+    usage example: sudo python3 qsr --dir yourdir --port portnumber --logfile mylog.txt --alias SiteName
     [--dir]     yourdir shall not contain the qsr.py to avoid overwrite. It is the root dir of the website.
     [--port]    port is default set to 80.
     [--logfile] log feature is turned off by default.
     [--alias]:  you can config your web site name via alias. By default, is your username.
-    [--quiet]:  This will not open your browser.
+    [--quiet]:  This will not open your browser, always queit on linux.
     """
 def parseArgs(args):
     opts,values=getopt.getopt(args,'-d:-p:-l:-a:-h:q',['help',"dir=",'port=','help','logfile=','alias=',"quiet"])
@@ -409,19 +409,20 @@ if __name__ == '__main__':
     if dir==qsr_dir or dir in qsr_dir:
         print("Please give a valid dir as your websit root.\nYou had better use a subfolder under '{}'".format(qsr_dir))
     else:
-        port=configs.get('port',80)
+        port=int(configs.get('port',80))
         logfileName=configs.get('logfile',"")
         if logfileName=="":
             print("Log feature is turned off the log by defalut")
         else:
             LOG_FILE_ABS_PATH="{}{}{}".format(qsr_dir.replace("/",os.path.sep),os.path.sep,logfileName)
             print("Log file is:\n    {}".format(LOG_FILE_ABS_PATH))
-        ALIAS=configs.get('alias',getpass.getuser())
+        ALIAS=configs.get('alias',HOST)
     server=None
     server = ThreadingSimpleServer(('0.0.0.0', port), SimpleHTTPRequestHandler)
     if server:
         if not configs.get("quiet",False):
-            webbrowser.open("http://127.0.0.1:{}".format(port))
+            #Will not work for linux, since run as sudo
+            webbrowser.open("http://127.0.0.1:{:d}".format(port))
         print("Http server is runing on:\n    {}\nWorking Folder:\n    {}\nPort:\n    {}".format(HOST,dir.replace("/",os.path.sep),port))
         try:
             while 1:
