@@ -262,9 +262,9 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         <body>\n<h2 align=\"center\"> <font color=\"blue\">{}</font>\'s site. 
         <br>  Now you are at <code ><font color=\"red\">{}</font></code>
         </h2>\n""".format(ALIAS, displaypath)).encode())
-        f.write(b"<form align=\"center\" ENCTYPE=\"multipart/form-data\" method=\"post\">")
+        f.write(b"<div align=\"center\"><form align=\"center\" ENCTYPE=\"multipart/form-data\" method=\"post\">")
         f.write(b"<input name=\"file\" type=\"file\"/>")
-        f.write(b"<input type=\"submit\" value=\"Upload\"/></form>\n")
+        f.write(b"<input type=\"submit\" value=\"Upload\"/></form></div>\n")
         f.write(b"<hr>\n<table align=\"center\" class=\"altrowstable\" id=\"alternatecolor\">\n")
         for name in folder_and_files:
             fullname = os.path.join(path.replace("\\",'/'), name.replace("\\",'/'))
