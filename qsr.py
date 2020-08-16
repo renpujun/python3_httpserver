@@ -363,7 +363,7 @@ helpMsg=\
     [--port]    port is default set to 80.
     [--logfile] log feature is turned off by default.
     [--alias]:  you can config your web site name via alias. By default, is your username.
-    [--quiet]:  This will not open your browser, always queit on linux.
+    [--quiet]:  This will not open your browser, always quiet on linux.
     """
 def parseArgs(args):
     opts,values=getopt.getopt(args,'-d:-p:-l:-a:-h:q',['help',"dir=",'port=','help','logfile=','alias=',"quiet"])
@@ -391,19 +391,14 @@ if __name__ == '__main__':
     configs={}
     if sys.argv.__len__()>1:
         configs=parseArgs(sys.argv[1:])
-    dir=configs.get('dir','')
-    if dir=="":
-        folder_prefix="qsr_website_root"
-        folder=folder_prefix
-        if os.path.exists(folder):
-            appendix=0
-            while not os.path.isdir(folder):
-                folder=folder_prefix+"_"+str(appendix)
-                appendix=+1
-                os.mkdir(folder)
-        else:
-            os.mkdir(folder)
-        dir=folder
+    dir=configs.get('dir','qsr_website_root')
+    if not os.path.isdir(dir):
+        count=0
+        prefix=dir
+        while not os.path.isdir(prefix+str(count)) and os.path.exists(prefix+str(count)):
+            count=count+1
+        dir=prefix+str(count)
+        os.mkdir(dir)
     os.chdir(dir)
     dir=os.getcwd().replace("\\",'/').rstrip('/')
     if dir==qsr_dir or dir in qsr_dir:
