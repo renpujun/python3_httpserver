@@ -19,9 +19,12 @@ import shutil
 import mimetypes
 import re
 from io import BytesIO
-
+import getopt
+import getpass
+import webbrowser
 HOST = socket.gethostname()
-ALIAS="Magic"
+ALIAS=""
+LOG_FILE_ABS_PATH=""
 CSS="""
 <script type="text/javascript">
 function altRows(id){
@@ -79,6 +82,13 @@ a:visited { text-decoration: none;color: black}
 -－>
 </style>
 """
+def log(*args):
+    if LOG_FILE_ABS_PATH=="":
+        pass
+    else:
+        with open(LOG_FILE_ABS_PATH,"a") as file:
+            logstring=" ".join(args)
+            file.write(logstring+"\n")
 
 
 class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
@@ -91,6 +101,7 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
     The GET/HEAD/POST requests are identical except that the HEAD
     request omits the actual contents of the file.
     """
+
 
     def do_GET(self):
         """Serve a GET request."""
@@ -107,8 +118,9 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
  
     def do_POST(self):
         """Serve a POST request."""
-        r, info = self.deal_post_data()
-        print((r, info, "by: ", self.client_address))
+        r, info,logmsg = self.deal_post_data()
+        if r:
+            log(info, "Client IP:", self.client_address[0],"")
         f = BytesIO()
         f.write(b'<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">')
         f.write("<html>\n<head>\n<meta content=\"text/html; charset=UTF-8\" http-equiv=\"Content-Type\">\n".encode())
@@ -135,20 +147,21 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
     def deal_post_data(self):
         content_type = self.headers['content-type']
         if not content_type:
-            return (False, "Content-Type header doesn't contain boundary")
+            return (False, "Content-Type header doesn't contain boundary","Content-Type header doesn't contain boundary")
         boundary = content_type.split("=")[1].encode()
         remainbytes = int(self.headers['content-length'])
         line = self.rfile.readline()
         remainbytes -= len(line)
         if not boundary in line:
-            return (False, "Content NOT begin with boundary")
+            return (False, "Content NOT begin with boundary","Content NOT begin with boundary")
         line = self.rfile.readline()
         remainbytes -= len(line)
         fn = re.findall(r'Content-Disposition.*name="file"; filename="(.*)"', line.decode())
-        if not fn:
+        if len(fn)==0:
             return (False, "Can't find out file name...")
         path = self.translate_path(self.path)
         fn = os.path.join(path, fn[0])
+        relative_file_path=fn.replace("\\","/").replace(os.getcwd().replace("\\","/").rstrip("/"),"",1)
         line = self.rfile.readline()
         remainbytes -= len(line)
         line = self.rfile.readline()
@@ -156,7 +169,7 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         try:
             out = open(fn, 'wb')
         except IOError:
-            return (False, "Can't create file to write, do you have permission to write?")
+            return (False, "Can't create file to write, do you have permission to write?","No permission: {}".format(fn))
                 
         preline = self.rfile.readline()
         remainbytes -= len(preline)
@@ -169,11 +182,11 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                     preline = preline[0:-1]
                 out.write(preline)
                 out.close()
-                return (True, "File '%s' upload success!" % fn)
+                return (True, "File '{}' upload success!".format(relative_file_path),"Success: {}".format(fn))
             else:
                 out.write(preline)
                 preline = line
-        return (False, "Unexpect Ends of data.")
+        return (False, "Unexpect Ends of data.","Unexpect Ends of data.")
  
     def send_head(self):
         """Common code for GET and HEAD commands.
@@ -228,8 +241,8 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         folders=[]
         files=[]
         try:
-            folders = [i.replace("\\",'/') for i in os.listdir(path.replace("\\",'/')) if os.path.isdir(i)]
-            files=[i.replace("\\",'/') for i in os.listdir(path.replace("\\",'/')) if os.path.isfile(i)]
+            folders = [i.replace("\\",'/') for i in os.listdir(path.replace("\\",'/')) if os.path.isdir(path.rstrip("/")+"/"+i)]
+            files=[i.replace("\\",'/') for i in os.listdir(path.replace("\\",'/')) if os.path.isfile(path.rstrip("/")+"/"+i)]
             folders=sorted(folders)
             files=sorted(files)
         except os.error:
@@ -240,7 +253,7 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         displaypath = html.escape(urllib.parse.unquote(self.path))
         f.write(b'<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">')
         f.write("<html>\n<head>\n<meta content=\"text/html; charset=UTF-8\" http-equiv=\"Content-Type\">\n".encode())
-        f.write(("<html>\n<title>Directory listing for %s</title>\n" % displaypath).encode())
+        f.write(("<html>\n<title>{}:{}</title>\n".format(ALIAS,displaypath)).encode())
         f.write('<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">'.encode())
         f.write("<html>\n<head>\n<meta content=\"text/html; charset=UTF-8\" http-equiv=\"Content-Type\">\n".encode())
         f.write(CSS.encode())
@@ -248,7 +261,7 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         f.write(("""
         <body>\n<h2 align=\"center\"> <font color=\"blue\">{}</font>\'s site. 
         <br>  Now you are at <code ><font color=\"red\">{}</font></code>
-        </h2>\n""".format(ALIAS, path)).encode())
+        </h2>\n""".format(ALIAS, displaypath)).encode())
         f.write(b"<form align=\"center\" ENCTYPE=\"multipart/form-data\" method=\"post\">")
         f.write(b"<input name=\"file\" type=\"file\"/>")
         f.write(b"<input type=\"submit\" value=\"Upload\"/></form>\n")
@@ -336,38 +349,87 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                          'java','py','cfg','ini','txt','frag','vert','elf','xml','md','qpa'
                          ]
     for i in txt_file_extensions:
-        extensions_map["."+i.lower().lstrip(".")]='text/html'
+        extensions_map["."+i.lower().lstrip(".")]='text/plain'
 
 class ThreadingSimpleServer(ThreadingMixIn, HTTPServer):
     pass
 
+
+helpMsg=\
+"""qsr.py tips:
+    qsr.py is only for python3.
+    usage example: python3 qsr --dir yourdir --port portnumber --logfile mylog.txt --alias SiteName
+    [--dir]     yourdir shall not contain the qsr.py to avoid overwrite. It is the root dir of the website.
+    [--port]    port is default set to 80.
+    [--logfile] log feature is turned off by default.
+    [--alias]:  you can config your web site name via alias. By default, is your username.
+    [--quiet]:  This will not open your browser.
+    """
+def parseArgs(args):
+    opts,values=getopt.getopt(args,'-d:-p:-l:-a:-h:q',['help',"dir=",'port=','help','logfile=','alias=',"quiet"])
+    configs={}
+    for key,value in opts:
+        if key in ('-h','--help'):
+            print(helpMsg)
+            sys.exit(0)
+        if key in ('-d','--dir'):
+            configs['dir']=value
+        if key in ('-p','--port'):
+            configs["port"]=value
+        if key in ('-l','--logfile'):
+            configs['logfile']=value
+        if key in ('-a','--alias'):
+            configs['alias']=value
+        if key in ("-q","--quiet"):
+            configs['quiet']=True
+    return configs
+
 if __name__ == '__main__':
-
-    '''
-    This sets the listening port, default port 8080
-    '''
-    if sys.argv[1:]:
-        PORT = int(sys.argv[1])
+    qsr_dir=os.path.dirname(__file__).replace('\\','/').rstrip('/')
+    port=80
+    dir=""
+    configs={}
+    if sys.argv.__len__()>1:
+        configs=parseArgs(sys.argv[1:])
+    dir=configs.get('dir','')
+    if dir=="":
+        folder_prefix="qsr_website_root"
+        folder=folder_prefix
+        if os.path.exists(folder):
+            appendix=0
+            while not os.path.isdir(folder):
+                folder=folder_prefix+"_"+str(appendix)
+                appendix=+1
+                os.mkdir(folder)
+        else:
+            os.mkdir(folder)
+        dir=folder
+    os.chdir(dir)
+    dir=os.getcwd().replace("\\",'/').rstrip('/')
+    if dir==qsr_dir or dir in qsr_dir:
+        print("Please give a valid dir as your websit root.\nYou had better use a subfolder under '{}'".format(qsr_dir))
     else:
-        PORT = 80
-
-    '''
-    This sets the working directory of the HTTPServer, defaults to directory where script is executed.
-    '''
-    if sys.argv[2:]:
-        os.chdir(sys.argv[2])
-        CWD = sys.argv[2]
+        port=configs.get('port',80)
+        logfileName=configs.get('logfile',"")
+        if logfileName=="":
+            print("Log feature is turned off the log by defalut")
+        else:
+            LOG_FILE_ABS_PATH="{}{}{}".format(qsr_dir.replace("/",os.path.sep),os.path.sep,logfileName)
+            print("Log file is:\n    {}".format(LOG_FILE_ABS_PATH))
+        ALIAS=configs.get('alias',getpass.getuser())
+    server=None
+    server = ThreadingSimpleServer(('0.0.0.0', port), SimpleHTTPRequestHandler)
+    if server:
+        if not configs.get("quiet",False):
+            webbrowser.open("http://127.0.0.1:{}".format(port))
+        print("Http server is runing on:\n    {}\nWorking Folder:\n    {}\nPort:\n    {}".format(HOST,dir.replace("/",os.path.sep),port))
+        try:
+            while 1:
+                sys.stdout.flush()
+                server.handle_request()
+        except KeyboardInterrupt:
+            print("\nShutting down server per users request.")
     else:
-        CWD = os.getcwd()
-
-    server = ThreadingSimpleServer(('0.0.0.0', PORT), SimpleHTTPRequestHandler)
-
-    print("Http server is runing on {}! \nWorking Folder: {}\nPort: {}".format(HOST,CWD,PORT))
-    try:
-        while 1:
-            sys.stdout.flush()
-            server.handle_request()
-    except KeyboardInterrupt:
-        print("\nShutting down server per users request.")
+        print("Fail to lunch the server")
 
 
