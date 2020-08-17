@@ -392,13 +392,15 @@ if __name__ == '__main__':
     if sys.argv.__len__()>1:
         configs=parseArgs(sys.argv[1:])
     dir=configs.get('dir','qsr_website_root')
-    if not os.path.isdir(dir):
-        count=0
-        prefix=dir
-        while not os.path.isdir(prefix+str(count)) and os.path.exists(prefix+str(count)):
-            count=count+1
-        dir=prefix+str(count)
-        os.mkdir(dir)
+    if os.path.isdir(dir):
+        print("{} already exists. Choose {} as the website root folder".format(dir,dir))
+    else:
+        if  not os.path.exists(dir):
+            os.mkdir(dir)
+            print("Create {} for you as the website root folder".format(dir))
+        else:
+            print("Please specify a subfolder as website root folder using -a")
+            exit(1)
     os.chdir(dir)
     dir=os.getcwd().replace("\\",'/').rstrip('/')
     if dir==qsr_dir or dir in qsr_dir:
