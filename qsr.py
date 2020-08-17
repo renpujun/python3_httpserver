@@ -358,9 +358,9 @@ class ThreadingSimpleServer(ThreadingMixIn, HTTPServer):
 helpMsg=\
 """qsr.py tips:
     qsr.py is only for python3.
-    usage example: sudo python3 qsr --dir yourdir --port portnumber --logfile mylog.txt --alias SiteName
+    usage example: python3 qsr --dir yourdir --port portnumber --logfile mylog.txt --alias SiteName
     [--dir]     yourdir shall not contain the qsr.py to avoid overwrite. It is the root dir of the website.
-    [--port]    port is default set to 80.
+    [--port]    port is default set to 80(windows)/8080(linux). If you choose 80 on linux, you must run as sudo. 
     [--logfile] log feature is turned off by default.
     [--alias]:  you can config your web site name via alias. By default, is your username.
     [--quiet]:  This will not open your browser, always quiet on linux.
@@ -406,7 +406,7 @@ if __name__ == '__main__':
     if dir==qsr_dir or dir in qsr_dir:
         print("Please give a valid dir as your websit root.\nYou had better use a subfolder under '{}'".format(qsr_dir))
     else:
-        port=int(configs.get('port',80))
+        port=int(configs.get('port',80 if os.path.exists("c:\\windows") else 8080))
         logfileName=configs.get('logfile',"")
         if logfileName=="":
             print("Log feature is turned off the log by defalut")
