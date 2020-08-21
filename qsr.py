@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
 #coding:utf-8
-
 """Simple HTTP Server With Upload.
 This module builds on BaseHTTPServer by implementing the standard GET
 and HEAD requests in a fairly straightforward manner.
 see: https://gist.github.com/UniIsland/3346170
 """
-
-
 import sys, os, socket
 from socketserver import ThreadingMixIn
 from http.server import SimpleHTTPRequestHandler, HTTPServer
@@ -20,7 +17,6 @@ import mimetypes
 import re
 from io import BytesIO
 import getopt
-import getpass
 import webbrowser
 HOST = socket.gethostname()
 ALIAS=""
@@ -28,17 +24,15 @@ LOG_FILE_ABS_PATH=""
 CSS="""
 <script type="text/javascript">
 function altRows(id){
-    if(document.getElementsByTagName){ 
-         
-        var table = document.getElementById(id); 
+    if(document.getElementsByTagName){
+        var table = document.getElementById(id);
         var rows = table.getElementsByTagName("tr");
-          
-        for(i = 0; i < rows.length; i++){         
+        for(i = 0; i < rows.length; i++){
             if(i % 2 == 0){
                 rows[i].className = "evenrowcolor";
             }else{
                 rows[i].className = "oddrowcolor";
-            }     
+            }
         }
     }
 }
@@ -46,7 +40,6 @@ window.onload=function(){
     altRows('alternatecolor');
 }
 </script>
-
 <style type="text/css">
 table.altrowstable {
     font-family: verdana,arial,sans-serif;
@@ -82,6 +75,24 @@ a:visited { text-decoration: none;color: black}
 -－>
 </style>
 """
+PREVIEW_HTML="""
+<html>
+<head>
+     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+     <meta http-equiv="Pragma" content="no-cache" />
+     <title>{filepath:}</title>
+</head>
+<script language="JavaScript">
+     onload = function()
+     {{
+          document.nameOfIFrame.document.body.style.fontFamily = "PF_Ubuntu,Consolas,Monaco,Ubuntu Mono,UbuntuMono,Microsoft YaHei,PingFangSC-Medium";
+     }}
+</script>
+     <frameset >
+         <frame name="refcode" marginwidth=80% src="{filepath:}">
+     </frameset>
+</html>
+"""
 def log(*args):
     if LOG_FILE_ABS_PATH=="":
         pass
@@ -89,10 +100,7 @@ def log(*args):
         with open(LOG_FILE_ABS_PATH,"a") as file:
             logstring=" ".join(args)
             file.write(logstring+"\n")
-
-
 class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
- 
     """Simple HTTP request handler with GET/HEAD/POST commands.
     This serves files from the current directory and any of its
     subdirectories.  The MIME type for files is determined by
@@ -101,21 +109,17 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
     The GET/HEAD/POST requests are identical except that the HEAD
     request omits the actual contents of the file.
     """
-
-
     def do_GET(self):
         """Serve a GET request."""
         f = self.send_head()
         if f:
             self.copyfile(f, self.wfile)
             f.close()
- 
     def do_HEAD(self):
         """Serve a HEAD request."""
         f = self.send_head()
         if f:
             f.close()
- 
     def do_POST(self):
         """Serve a POST request."""
         r, info,logmsg = self.deal_post_data()
@@ -143,7 +147,7 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         if f:
             self.copyfile(f, self.wfile)
             f.close()
-        
+
     def deal_post_data(self):
         content_type = self.headers['content-type']
         if not content_type:
@@ -170,7 +174,6 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             out = open(fn, 'wb')
         except IOError:
             return (False, "Can't create file to write, do you have permission to write?","No permission: {}".format(fn))
-                
         preline = self.rfile.readline()
         remainbytes -= len(preline)
         while remainbytes > 0:
@@ -187,7 +190,6 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                 out.write(preline)
                 preline = line
         return (False, "Unexpect Ends of data.","Unexpect Ends of data.")
- 
     def send_head(self):
         """Common code for GET and HEAD commands.
         This sends the response code and MIME headers.
@@ -197,7 +199,16 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         None, in which case the caller has nothing further to do.
         """
         path = self.translate_path(self.path)
-        f = None
+        arg =urllib.parse.unquote(urllib.parse.urlparse(self.path)[4])
+        request_url =urllib.parse.unquote(urllib.parse.urlparse(self.path)[2])
+        dummyfolder=os.path.split(request_url)[0]
+        is_preview=False
+        file_name=""
+        if os.path.split(request_url)[-1]=='preview.html':
+            is_preview=True
+            file_name=arg
+            path = os.getcwd()+dummyfolder + "/" + file_name
+        path.replace("\\","/")
         if os.path.isdir(path):
             if not self.path.endswith('/'):
                 # redirect browser - doing basically what apache does
@@ -211,7 +222,7 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                     path = index
                     break
             else:
-                return self.list_directory(path)
+                return self.list_directory(path,arg)
         ctype = self.guess_type(path)
         try:
             # Always read in binary mode. Opening files in text mode may cause
@@ -221,30 +232,40 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         except IOError:
             self.send_error(404, "File not found")
             return None
-        self.send_response(200)
-        self.send_header("Content-type", ctype)
-        fs = os.fstat(f.fileno())
-        self.send_header("ContentType", "text/html")
-        self.send_header('charset', "utf-8")
-        self.send_header("Content-Length", str(fs[6]))
-        self.send_header("Last-Modified", self.date_time_string(fs.st_mtime))
-        self.end_headers()
-        return f
- 
-    def list_directory(self, path):
+        if is_preview and ctype=='text/plain':
+            self.send_response(200)
+            self.send_header("Content-type", 'text/html')
+            fs = os.fstat(f.fileno())
+            self.send_header('charset', "utf-8")
+            fstream=BytesIO()
+            dic={"filepath": file_name}
+            fstream.write(PREVIEW_HTML.format(**dic).encode())
+            self.send_header("Content-Length", str(fstream.tell()))
+            fstream.seek(0)
+            self.send_header("Last-Modified", self.date_time_string(fs.st_mtime))
+            self.end_headers()
+            return fstream
+        else:
+            self.send_response(200)
+            self.send_header("Content-type", ctype)
+            fs = os.fstat(f.fileno())
+            self.send_header("ContentType", "text/html")
+            self.send_header('charset', "utf-8")
+            self.send_header("Content-Length", str(fs[6]))
+            self.send_header("Last-Modified", self.date_time_string(fs.st_mtime))
+            self.end_headers()
+            return f
+    def list_directory(self, path,arg=""):
         """Helper to produce a directory listing (absent index.html).
         Return value is either a file object, or None (indicating an
         error).  In either case, the headers are sent, making the
         interface the same as for send_head().
         """
-        folder_and_files=[]
-        folders=[]
-        files=[]
         try:
             folders = [i.replace("\\",'/') for i in os.listdir(path.replace("\\",'/')) if os.path.isdir(path.rstrip("/")+"/"+i)]
             files=[i.replace("\\",'/') for i in os.listdir(path.replace("\\",'/')) if os.path.isfile(path.rstrip("/")+"/"+i)]
-            folders=sorted(folders)
-            files=sorted(files)
+            folders=sorted(folders,key=lambda x:x.lower())
+            files=sorted(files,key=lambda  x:x.lower())
         except os.error:
             self.send_error(404, "No permission to list directory")
             return None
@@ -255,13 +276,14 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         f.write("<html>\n<head>\n<meta content=\"text/html; charset=UTF-8\" http-equiv=\"Content-Type\">\n".encode())
         f.write(("<html>\n<title>{}:{}</title>\n".format(ALIAS,displaypath)).encode())
         f.write('<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">'.encode())
-        f.write("<html>\n<head>\n<meta content=\"text/html; charset=UTF-8\" http-equiv=\"Content-Type\">\n".encode())
+        f.write("<html>\n<head>\n<meta content=\"text/html; charset=UTF-8\" http-equiv=\"Content-Type\">"
+                "<meta http-equiv=\"Pragma\" content=\"no-cache\" />\n".encode())
         f.write(CSS.encode())
-        f.write(("<title>RPJ %s</title>\n</head>\n" % displaypath).encode())
+        f.write(("<title>%s</title>\n</head>\n" % displaypath).encode())
         f.write(("""
-        <body>\n<h2 align=\"center\"> <font color=\"blue\">{}</font>\'s site. 
-        <br>  Now you are at <code ><font color=\"red\">{}</font></code>
-        </h2>\n""".format(ALIAS, displaypath)).encode())
+                    <body>\n<h2 align=\"center\"> <font color=\"blue\">{}</font>\'s site.
+                    <br>  Now you are at <code ><font color=\"red\">{}</font></code>
+                    </h2>\n""".format(ALIAS, displaypath)).encode())
         f.write(b"<div align=\"center\"><form align=\"center\" ENCTYPE=\"multipart/form-data\" method=\"post\">")
         f.write(b"<input name=\"file\" type=\"file\"/>")
         f.write(b"<input type=\"submit\" value=\"Upload\"/></form></div>\n")
@@ -269,10 +291,15 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         for name in folder_and_files:
             fullname = os.path.join(path.replace("\\",'/'), name.replace("\\",'/'))
             displayname = linkname = name.replace("\\",'/')
+            link_url='preview.html'+'?'+(linkname)
             # Append / for dirctories or @ for symbolic links
             if os.path.isdir(fullname):
                 displayname = name + "/"
                 linkname = name + "/"
+                link_url=linkname
+            else:
+                if self.guess_type(linkname)!='text/plain':
+                    link_url = linkname
             if os.path.islink(fullname):
                 displayname = name + "@"
                 # Note: a link to a directory displays with @ and links with /
@@ -281,10 +308,9 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                                             else
                                                 """<a href=\"{}\" download="" >{}</a>""".format("./"+name, "DownLoad"))
             f.write("<tr>".encode())
-            f.write(('<td width=400><a href="%s">%s</a></td>\n'
-                    % (urllib.parse.quote(linkname), html.escape(displayname))).encode('utf-8'))
-            f.write("""<td width="200">{}</td>""".format(download_area).encode())
-
+            f.write(('<td width=400><a href="%s">%s</a></td>'
+                    % (link_url, html.escape(displayname))).encode('utf-8'))
+            f.write("""<td width="200">{}</td>\n""".format(download_area).encode())
             f.write("</tr>".encode())
         f.write(b"</table>\n<hr>\n</body>\n</html>\n")
         length = f.tell()
@@ -295,7 +321,6 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(length))
         self.end_headers()
         return f
- 
     def translate_path(self, path):
         """Translate a /-separated PATH to the local filename syntax.
         Components that mean special things to the local file system
@@ -315,7 +340,6 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             if word in (os.curdir, os.pardir): continue
             path = os.path.join(path, word)
         return path
- 
     def copyfile(self, source, outputfile):
         """Copy all data between two file objects.
         The SOURCE argument is a file object open for reading
@@ -328,7 +352,6 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         to copy binary data as well.
         """
         shutil.copyfileobj(source, outputfile)
- 
     def guess_type(self, path):
         base, ext = posixpath.splitext(path)
         if ext in self.extensions_map:
@@ -338,7 +361,6 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             return self.extensions_map[ext]
         else:
             return self.extensions_map['']
- 
     if not mimetypes.inited:
         mimetypes.init() # try to read system mime.types
     extensions_map = mimetypes.types_map.copy()
@@ -346,22 +368,21 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         '': 'application/octet-stream', # Default
         })
     txt_file_extensions=['cpp','c','h','hpp',
-                         'java','py','cfg','ini','txt','frag','vert','elf','xml','md','qpa'
+                         'java','py','cfg','ini','txt','frag','vert','elf','xml','md','qpa',
+                         'php','asp','cs','bat','sh','csv','reg','y','log'
                          ]
     for i in txt_file_extensions:
         extensions_map["."+i.lower().lstrip(".")]='text/plain'
-
 class ThreadingSimpleServer(ThreadingMixIn, HTTPServer):
     pass
-
-
 helpMsg=\
 """qsr.py tips:
     qsr.py is only for python3.
+    You'd better use Chrome or Firefox. QQbrowser has some bugs.
     usage example: python3 qsr --dir yourdir --port portnumber --logfile mylog.txt --alias SiteName
-    [--dir]     yourdir shall not contain the qsr.py to avoid overwrite. It is the root dir of the website.
-    [--port]    port is default set to 80(windows)/8080(linux). If you choose 80 on linux, you must run as sudo. 
-    [--logfile] log feature is turned off by default.
+    [--dir]:     yourdir shall not contain the qsr.py to avoid overwrite. It is the root dir of the website.
+    [--port]:    port is default set to 80(windows)/8080(linux). If you choose 80 on linux, you must run as sudo.
+    [--logfile]: log feature is turned off by default.
     [--alias]:  you can config your web site name via alias. By default, is your username.
     [--quiet]:  This will not open your browser, always quiet on linux.
     """
@@ -383,7 +404,6 @@ def parseArgs(args):
         if key in ("-q","--quiet"):
             configs['quiet']=True
     return configs
-
 if __name__ == '__main__':
     qsr_dir=os.path.dirname(__file__).replace('\\','/').rstrip('/')
     port=80
@@ -418,7 +438,6 @@ if __name__ == '__main__':
     server = ThreadingSimpleServer(('0.0.0.0', port), SimpleHTTPRequestHandler)
     if server:
         if not configs.get("quiet",False):
-            #Will not work for linux, since run as sudo
             webbrowser.open("http://127.0.0.1:{:d}".format(port))
         print("Http server is runing on:\n    {}\nWorking Folder:\n    {}\nPort:\n    {}".format(HOST,dir.replace("/",os.path.sep),port))
         try:
@@ -429,5 +448,3 @@ if __name__ == '__main__':
             print("\nShutting down server per users request.")
     else:
         print("Fail to lunch the server")
-
-
