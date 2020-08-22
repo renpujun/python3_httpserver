@@ -300,11 +300,9 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             else:
                 if self.guess_type(linkname)!='text/plain':
                     link_url = linkname
-            if os.path.islink(fullname):
-                displayname = name + "@"
-                # Note: a link to a directory displays with @ and links with /
+
             download_area=   "{}".format(
-                                        "" if os.path.isdir(fullname) or os.path.islink(fullname)
+                                        "" if os.path.isdir(fullname)
                                             else
                                                 """<a href=\"{}\" download="" >{}</a>""".format("./"+name, "DownLoad"))
             f.write("<tr>".encode())
