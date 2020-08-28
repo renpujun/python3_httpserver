@@ -128,6 +128,7 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         f = BytesIO()
         f.write(b'<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">')
         f.write("<html>\n<head>\n<meta content=\"text/html; charset=UTF-8\" http-equiv=\"Content-Type\">\n".encode())
+        f.write("""<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0,minimum-scale=1.0,user-scalable=0" />""".encode())
         f.write(b"\n<title>Upload Result Page</title>\n")
         f.write(b"<body>\n<div align=\"center\"><h2>Upload Result Page</h2>\n")
         f.write(b"<hr>\n")
@@ -278,6 +279,7 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         f.write('<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">'.encode())
         f.write("<html>\n<head>\n<meta content=\"text/html; charset=UTF-8\" http-equiv=\"Content-Type\">"
                 "<meta http-equiv=\"Pragma\" content=\"no-cache\" />\n".encode())
+        f.write("""<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0,minimum-scale=1.0,user-scalable=0" />""".encode())
         f.write(CSS.encode())
         f.write(("<title>%s</title>\n</head>\n" % displaypath).encode())
         f.write(("""
@@ -308,7 +310,7 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             f.write("<tr>".encode())
             f.write(('<td width=400><a href="%s">%s</a></td>'
                     % (link_url, html.escape(displayname))).encode('utf-8'))
-            f.write("""<td width="200">{}</td>\n""".format(download_area).encode())
+            f.write("""<td width="100">{}</td>\n""".format(download_area).encode())
             f.write("</tr>".encode())
         f.write(b"</table>\n<hr>\n</body>\n</html>\n")
         length = f.tell()
