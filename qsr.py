@@ -367,7 +367,8 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         })
     txt_file_extensions=['cpp','c','h','hpp',
                          'java','py','cfg','ini','txt','frag','vert','elf','xml','md','qpa',
-                         'php','asp','cs','bat','sh','csv','reg','y','log'
+                         'php','asp','cs','bat','sh','csv','reg','y','log',
+                         'desktop'
                          ]
     for i in txt_file_extensions:
         extensions_map["."+i.lower().lstrip(".")]='text/plain'
