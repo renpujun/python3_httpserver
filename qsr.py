@@ -42,7 +42,7 @@ window.onload=function(){
 </script>
 <style type="text/css">
 table.altrowstable {
-    font-family: verdana,arial,sans-serif;
+    font-family: monospace,PF_Ubuntu,Consolas,Monaco,Ubuntu Mono,UbuntuMono,Microsoft YaHei,PingFangSC-Medium;
     font-size:14px;
     color:#333333;
     border-width: 1px;
@@ -133,11 +133,11 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         f.write(b"<body>\n<div align=\"center\"><h2>Upload Result Page</h2>\n")
         f.write(b"<hr>\n")
         if r:
-            f.write(b"<strong>Success:</strong>")
+            f.write(b"<strong>Upload Success</strong><br>")
         else:
-            f.write(b"<strong>Failed:</strong>")
+            f.write(b"<strong>Upload Fail</strong><br>")
         f.write(info.encode())
-        f.write(("<br><a href=\"%s\" > <font color=\"green\">Click here to go back!!!</font></a>" % self.headers['referer']).encode())
+        f.write(("<br><br><br><a href=\"%s\" > <font color=\"green\">Click here to go back!!!</font></a>" % self.headers['referer']).encode())
         f.write(b"</a>.</small></div></body>\n</html>\n")
         length = f.tell()
         f.seek(0)
@@ -163,7 +163,10 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         remainbytes -= len(line)
         fn = re.findall(r'Content-Disposition.*name="file"; filename="(.*)"', line.decode())
         if len(fn)==0:
-            return (False, "Can't find out file name...")
+            return (False, "Can't find out file name...","Fail to find name.")
+        if not fn[0]:
+            return (False, "File name is null.", "File name is null.")
+
         path = self.translate_path(self.path)
         fn = os.path.join(path, fn[0])
         relative_file_path=fn.replace("\\","/").replace(os.getcwd().replace("\\","/").rstrip("/"),"",1)
@@ -283,13 +286,13 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         f.write(CSS.encode())
         f.write(("<title>%s</title>\n</head>\n" % displaypath).encode())
         f.write(("""
-                    <body>\n<h2 align=\"center\"> <font color=\"blue\">{}</font>\'s site.
-                    <br>  Now you are at <code ><font color=\"red\">{}</font></code>
+                    <body>\n<h2 align=\"center\"> <font color=\"blue\"  face='Ubuntu,sans-serif'>{}</font>
+                    <br><code ><font color=\"red\" face='monospace'>{}</font></code>
                     </h2>\n""".format(ALIAS, displaypath)).encode())
         f.write(b"<div align=\"center\"><form align=\"center\" ENCTYPE=\"multipart/form-data\" method=\"post\">")
         f.write(b"<input name=\"file\" type=\"file\"/>")
         f.write(b"<input type=\"submit\" value=\"Upload\"/></form></div>\n")
-        f.write(b"<hr>\n<table align=\"center\" class=\"altrowstable\" id=\"alternatecolor\">\n")
+        f.write(b"\n<table align=\"center\" class=\"altrowstable\" id=\"alternatecolor\">\n")
         for name in folder_and_files:
             fullname = os.path.join(path.replace("\\",'/'), name.replace("\\",'/'))
             displayname = linkname = name.replace("\\",'/')
@@ -308,11 +311,11 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                                             else
                                                 """<a href=\"{}\" download="" >{}</a>""".format("./"+name, "DownLoad"))
             f.write("<tr>".encode())
-            f.write(('<td width=400><a href="%s">%s</a></td>'
+            f.write(('<td width=500  word-break=break-all word-wrap=break-word ><a href="%s">%s</a></td>'
                     % (link_url, html.escape(displayname))).encode('utf-8'))
-            f.write("""<td width="100">{}</td>\n""".format(download_area).encode())
+            f.write("""<td width="80">{}</td>\n""".format(download_area).encode())
             f.write("</tr>".encode())
-        f.write(b"</table>\n<hr>\n</body>\n</html>\n")
+        f.write(b"</table>\n\n</body>\n</html>\n")
         length = f.tell()
         f.seek(0)
         self.send_response(200)
