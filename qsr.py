@@ -21,6 +21,7 @@ import webbrowser
 HOST = socket.gethostname()
 ALIAS=""
 LOG_FILE_ABS_PATH=""
+LOG_MESSAGE=True
 CSS="""
 <script type="text/javascript">
 function altRows(id){
@@ -109,6 +110,10 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
     The GET/HEAD/POST requests are identical except that the HEAD
     request omits the actual contents of the file.
     """
+    def log_message(self, format, *args):
+        if LOG_MESSAGE:
+            super().log_message(format,*args)
+
     def do_GET(self):
         """Serve a GET request."""
         f = self.send_head()
@@ -354,7 +359,11 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         -- note however that this the default server uses this
         to copy binary data as well.
         """
-        shutil.copyfileobj(source, outputfile)
+        try:
+            shutil.copyfileobj(source, outputfile)
+        except ConnectionResetError:
+            pass
+
     def guess_type(self, path):
         base, ext = posixpath.splitext(path)
         if ext in self.extensions_map:
@@ -364,6 +373,7 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             return self.extensions_map[ext]
         else:
             return self.extensions_map['']
+
     if not mimetypes.inited:
         mimetypes.init() # try to read system mime.types
     extensions_map = mimetypes.types_map.copy()
@@ -377,6 +387,8 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                          ]
     for i in txt_file_extensions:
         extensions_map["."+i.lower().lstrip(".")]='text/plain'
+
+
 class ThreadingSimpleServer(ThreadingMixIn, HTTPServer):
     pass
 helpMsg=\
@@ -415,9 +427,9 @@ if __name__ == '__main__':
     configs={}
     if sys.argv.__len__()>1:
         configs=parseArgs(sys.argv[1:])
-    dir=configs.get('dir','qsr_website_root')
+    dir=configs.get('dir','!qsr_website_root')
     if os.path.isdir(dir):
-        print("{} already exists. Choose {} as the website root folder".format(dir,dir))
+        pass
     else:
         if  not os.path.exists(dir):
             os.mkdir(dir)
@@ -433,7 +445,7 @@ if __name__ == '__main__':
         port=int(configs.get('port',80 if os.path.exists("c:\\windows") else 8080))
         logfileName=configs.get('logfile',"")
         if logfileName=="":
-            print("Log feature is turned off the log by defalut")
+            pass
         else:
             LOG_FILE_ABS_PATH="{}{}{}".format(qsr_dir.replace("/",os.path.sep),os.path.sep,logfileName)
             print("Log file is:\n    {}".format(LOG_FILE_ABS_PATH))
@@ -443,6 +455,8 @@ if __name__ == '__main__':
     if server:
         if not configs.get("quiet",False):
             webbrowser.open("http://127.0.0.1:{:d}".format(port))
+        else:
+            LOG_MESSAGE=False
         print("Http server is runing on:\n    {}\nWorking Folder:\n    {}\nPort:\n    {}".format(HOST,dir.replace("/",os.path.sep),port))
         try:
             while 1:
