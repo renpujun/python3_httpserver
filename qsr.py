@@ -400,7 +400,7 @@ helpMsg=\
     [--port]:    port is default set to 80(windows)/8080(linux). If you choose 80 on linux, you must run as sudo.
     [--logfile]: log feature is turned off by default.
     [--alias]:  you can config your web site name via alias. By default, is your username.
-    [--quiet]:  This will not open your browser, always quiet on linux.
+    [--quiet]:  This will not open your browser and disable the log in the terminal.
     """
 def parseArgs(args):
     opts,values=getopt.getopt(args,'-d:-p:-l:-a:-h:q',['help',"dir=",'port=','help','logfile=','alias=',"quiet"])
